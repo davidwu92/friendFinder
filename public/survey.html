@@ -11,9 +11,10 @@
 </head>
 <body>
   <div class="container">
+    <div id="showFriend"></div> <!--show friend button goes here-->
     <h1>Survey Questions</h1>
     <form>
-        <h3>About You</h3>
+      <h3>About You</h3>
       <div class="form-group"> <!--NAME FIELD id=userName-->
         <label for="userName">Your name (required)</label>
         <input type="input" class="form-control" id="userName" aria-describedby="emailHelp" placeholder="Enter name">
@@ -26,7 +27,7 @@
       <h4>Answer each of the questions below with a rating from 1 (strongly disagree) to 5 (strongly agree)</h4>
       <div class="form-group"> <!--Question 1-->
           <h5>Question 1</h5>
-          <label for="question1">You prefer team-based games</label>
+          <label for="question1">You prefer team-based games.</label>
           <select class="form-control" id="question1">
             <option>1</option>
             <option>2</option>
@@ -37,7 +38,7 @@
       </div>
       <div class="form-group"> <!--Question 2-->
           <h5>Question 2</h5>
-          <label for="question2">Having positive player to player communication is important to you</label>
+          <label for="question2">Having positive player to player communication is important to you.</label>
           <select class="form-control" id="question2">
             <option>1</option>
             <option>2</option>
@@ -134,8 +135,24 @@
             <option>5</option>
           </select>
       </div>
-      <button type="submit" id="submit" class="btn btn-primary">Submit</button>
+      <button  type="submit" class="btn btn-primary" data-toggle="modal" data-target=".bd-example-modal-lg" id="submit" class="btn btn-primary">Submit</button>
     </form>
+  </div>
+  <!-- MODAL POPUP -->
+  <div class="modal fade bd-example-modal-lg" tabindex="-1" role="dialog" aria-labelledby="myLargeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+          <div class="modal-header">
+              <h5 class="modal-title" id="modalTitle"></h5>
+              <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+              </button>
+          </div>
+          <div class="modal-body">
+              <img style="left: 50%; width: 80%" id="friendPhoto" src="" alt="Your best match!">
+          </div>
+      </div>
+    </div>
   </div>
 
   <!-- Bootstrap CDNs -->
@@ -149,8 +166,7 @@
   <script>
     document.getElementById('submit').addEventListener('click', e=>{ //When SUBMIT is hit...
       e.preventDefault()
-      //create newUser...
-      let newUser = {
+      let newUser = { //create newUser...
         name: document.getElementById('userName').value,
         photo: document.getElementById('imageLink').value,
         scores: [
@@ -167,18 +183,37 @@
         ]
       }
       console.log(newUser)
-      //...then reset form
+    //...then reset form
       document.getElementById('userName').value = ""
       document.getElementById('imageLink').value = ""
       for (let i = 1; i<=10; i++) {
-        document.getElementById(`question${i}`).value = "";
+        document.getElementById(`question${i}`).value = "1";
       }
-      //...then send newUser to server.
+    //...then send newUser to server and find the best match
       axios.post('/newFriend', newUser)
-      .then(()=>{console.log("Sent newUser to server.")})
+      .then(()=>{
+        axios.get('/getFriends')
+        .then(({data})=>{
+          //data = array of users' objects (starting with Ahmed)
+          let scoreCompare = [] //array of previously-entered users' scores as compared to newUser's
+          data.forEach((user, userIndex) => {
+            if(userIndex < data.length - 1){ //Ensure we don't compare the newUser to themself
+              let scoreDif = 0
+              for (let s = 0; s<10; s++){
+                scoreDif += Math.abs(user.scores[s]-newUser.scores[s])
+              }
+              scoreCompare.push(scoreDif)
+            }
+          });
+          console.log(`You matched with ${data[scoreCompare.indexOf(Math.min(...scoreCompare))].name}`)
+          console.log(`Here's their image: ${data[scoreCompare.indexOf(Math.min(...scoreCompare))].photo}`)
+        //MODIFY MODAL POPUP
+          document.getElementById('modalTitle').textContent = `You best matched with ${data[scoreCompare.indexOf(Math.min(...scoreCompare))].name}!`
+          document.getElementById('friendPhoto').src= data[scoreCompare.indexOf(Math.min(...scoreCompare))].photo
+        })
+      })
       .catch((e)=>{console.log(e)})
     })
   </script>
-
 </body>
 </html>
